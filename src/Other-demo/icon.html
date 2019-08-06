@@ -1,0 +1,258 @@
+<!DOCTYPE>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+	<style>
+		#cas{
+			display: block;
+			border:1px solid;
+			margin:auto;
+		}
+		/*.controlDot{
+			position:absolute;
+			width:10px;
+			height:10px;
+			border:1px solid;
+			border-radius:6px;
+			background-color:#000;
+		}
+		.controlDot:hover{
+			background-color: #FFF;
+		}*/
+	</style>
+	<script>
+   
+		window.onload = function(){
+      const img = new Image() 
+      img.src = './jizhan.png'
+
+			canvas = document.getElementById('cas');
+			context = canvas.getContext('2d');
+
+
+			now = "huabi"
+			var polygons = [];
+			var polygon;
+			canvas.onmousedown = function(event){
+				event = event || window.event;
+				canCreate = true;
+
+				var mouse ={
+					x: event.clientX + document.documentElement.scrollLeft + document.body.scrollLeft - canvas.offsetLeft - 14,
+          y: event.clientY + document.documentElement.scrollTop + document.body.scrollTop - canvas.offsetTop - 28
+				}
+				polygons.forEach(function(){
+          if((mouse.x>= this.x-14 && mouse.x<= this.x+14) &&(mouse.y >= this.y-28 && mouse.y <= this.y)){
+            canCreate = false;
+						polygon = this;
+          }
+				});
+        if(canCreate){
+          polygon = new Polygon(mouse.x , mouse.y);
+          polygons.push(polygon);
+				}else {
+          window.onmousemove = (event) =>{
+            event = event || window.event;
+            context.clearRect(0,0,canvas.width,canvas.height);
+
+            var mouse ={
+              x: event.clientX + document.documentElement.scrollLeft + document.body.scrollLeft - canvas.offsetLeft - 14,
+              y: event.clientY + document.documentElement.scrollTop + document.body.scrollTop - canvas.offsetTop - 28
+            }
+            // 边界值
+            let leftNode = {
+              x: 0,
+              y: 0
+            } 
+            let rightNode = {
+              x : 600-28,
+              y: 600-28
+            }
+            
+            if(mouse.x <= leftNode.x) mouse.x = leftNode.x
+            if(mouse.x >= rightNode.x) mouse.x = rightNode.x
+            if(mouse.y <= leftNode.y) mouse.y = leftNode.y
+            if(mouse.y>= rightNode.y) mouse.y = rightNode.y
+
+            polygon.move(mouse.x , mouse.y);
+            drawPolygon(img, polygons);
+          }
+        }
+
+        drawPolygon(img, polygons);
+        
+        
+
+        window.onmouseup = function(){
+          window.onmousemove = null;
+        }
+				
+			}
+
+			document.getElementById("clear").onclick = function(event){
+				event = event || window.event;
+				if(now !== "huabi") return;
+				now = "picha"
+				var mouse = {
+					x:event.clientX+document.documentElement.scrollLeft+document.body.scrollLeft - canvas.offsetLeft,
+					y:event.clientY+document.documentElement.scrollTop+document.body.scrollTop - canvas.offsetTop
+				}
+				var cl = new clear(mouse.x , mouse.y , document.getElementById("clearRange").value);
+				window.onmousemove = function(event){
+					event = event || window.event;
+					var mouse = {
+						x:event.clientX+document.documentElement.scrollLeft+document.body.scrollLeft - canvas.offsetLeft,
+						y:event.clientY+document.documentElement.scrollTop+document.body.scrollTop - canvas.offsetTop
+					}
+					cl.move(mouse.x , mouse.y)
+				}
+				canvas.addEventListener("mousedown" , function(){
+					if(now !== "picha") return;
+					cl.clearCircle();
+					window.addEventListener("mousemove" , clearEvent);
+					window.addEventListener("mouseup" , function(){
+						window.removeEventListener("mousemove" , clearEvent)
+					});
+				});
+
+				function clearEvent(){
+					event = window.event;
+					console.log('ss')
+					var mouse = {
+						x:event.clientX+document.documentElement.scrollLeft+document.body.scrollLeft - canvas.offsetLeft,
+						y:event.clientY+document.documentElement.scrollTop+document.body.scrollTop - canvas.offsetTop
+					}
+					cl.clearCircle()
+				}
+			}
+
+			document.getElementById("pen").onclick = function(){
+				now = "huabi";
+				resetImgData();
+			}
+		}
+
+		var clear = function(centerX , centerY , radius){
+			this.x = centerX;
+			this.y = centerY;
+			this.radius = radius;
+			saveImgData();
+		}
+
+		clear.prototype = {
+			createCircle:function(){
+				context.save();
+				context.beginPath();
+				context.arc(this.x , this.y , this.radius , 0 , 2*Math.PI);
+				context.fillStyle = "#FFF";
+				context.fill();
+				saveImgData();
+				context.stroke();
+			},
+			clearCircle:function(){
+				context.clip();
+				context.clearRect(0,0,canvas.width , canvas.height);
+				context.restore();
+			},
+			move:function(x , y){
+				context.clearRect(0,0,canvas.width , canvas.height);
+				resetImgData();
+				this.x = x;
+				this.y = y;
+				this.createCircle();
+			}
+		}
+
+		function saveImgData(){
+			imageData = context.getImageData(0,0,canvas.width,canvas.height)
+		}
+		function resetImgData(){
+			context.putImageData(imageData , 0 , 0 );
+		}
+
+		function drawPolygon(img, polygons){
+			polygons.forEach(function(){
+				// this.stroke(context);
+				// this.fill(context);
+        context.drawImage(img, this.x, this.y, 28, 28)
+			});
+		}
+
+		Array.prototype.forEach = function(callback){
+			for(var i=0;i<this.length;i++){
+				callback.call(this[i]);
+			}
+		}
+
+		var Polygon = function(x , y){
+			this.x = x;
+			this.y = y;
+		}
+
+		Polygon.prototype = {
+			getPoints:function(){
+				var points = [],
+				angle = this.startAngle || 0;
+				for(var i=0;i<this.slides;i++){
+					points.push({
+						x:this.upordown ? (this.centerX + this.radius * -Math.cos(angle)) : (this.centerX + this.radius * Math.cos(angle)),
+						y:this.upordown ? (this.centerY + this.radius * -Math.sin(angle)) : (this.centerY + this.radius * Math.sin(angle))
+					});
+					angle += 2*Math.PI/this.slides;
+				}
+				return points;
+			},
+			createPath:function(){
+				var points = this.getPoints();
+				context.beginPath();
+				context.moveTo(points[0].x , points[0].y)
+				for(var i=1;i<this.slides;i++){
+					context.lineTo(points[i].x , points[i].y)
+				}
+				context.closePath();
+			},
+			stroke:function(){
+				context.save();
+				this.createPath();
+				context.strokeStyle = this.strokeStyle;
+				context.stroke();
+				context.restore();
+			},
+			fill:function(){
+				context.save();
+				this.createPath();
+				context.fillStyle = this.fillStyle;
+				context.fill();
+				context.restore();
+			},
+			move:function(x,y){
+				this.x = x;
+				this.y = y;
+			},
+			clear:function(){
+				var minX=1000000,maxX=0,minY=100000,maxY=0;
+				var points = this.getPoints();
+				for(var i=0;i<points.length;i++){
+					minX = points[i].x > minX ? minX : points[i].x;
+					minY = points[i].y > minY ? minY : points[i].y;
+					maxX = points[i].x > maxX ? points[i].x : maxX;
+					maxY = points[i].y > maxY ? points[i].y : maxY;
+				}
+				context.clearRect(minX-1 , minY-1 , maxX , maxY);
+			}
+		}
+	</script>
+	<title>绘制多边形</title>
+</head>
+<body>
+	<div >
+		<canvas id='cas' width="600" height="600">浏览器不支持canvas</canvas>
+		<div style="text-align:center">
+			<button id="pen">画笔</button>
+			画<input type="number" min="3" id="changeSlide" value="6"style="width:50px">边型 &nbsp;&nbsp;&nbsp;
+			<button id="clear">橡皮擦</button>
+			<input type="range" step="1" value="50" min="1" max="100" id="clearRange">
+		</div>
+	</div>
+</body>
+</html>
